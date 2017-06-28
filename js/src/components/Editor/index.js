@@ -9,6 +9,7 @@ import {
   convertToRaw,
   convertFromRaw,
   CompositeDecorator,
+  DefaultDraftBlockRenderMap,
 } from 'draft-js';
 import {
   changeDepth,
@@ -80,6 +81,8 @@ export default class WysiwygEditor extends Component {
     ariaHasPopup: PropTypes.string,
     customBlockRenderFunc: PropTypes.func,
     customDecorators: PropTypes.array,
+    customBlockStyleFn: PropTypes.func,
+    customBlockRenderMap: PropTypes.object,
   };
 
   static defaultProps = {
@@ -267,6 +270,26 @@ export default class WysiwygEditor extends Component {
     return new CompositeDecorator(decorators);
   }
 
+  getBlockStyleFn = () : Function => {
+    if (! this.props.customBlockStyleFn) return blockStyleFn;
+    return (block) => {
+      const styles = [this.props.customBlockStyleFn(block), blockStyleFn(block)];
+      let style;
+      styles.forEach(s => {
+        if (!s) return;
+        if (!style) style = s;
+        else style += ' ' + s;
+      });
+      return style
+    }
+  };
+
+  getBlockRenderMap = () : Function => {
+    return this.props.customBlockRenderMap ?
+      DefaultDraftBlockRenderMap.merge(this.props.customBlockRenderMap) :
+      DefaultDraftBlockRenderMap;
+  };
+
   getWrapperRef = () => this.wrapper;
 
   getEditorState = () => this.state.editorState;
@@ -445,9 +468,10 @@ export default class WysiwygEditor extends Component {
             onDownArrow={this.onUpDownArrow}
             editorState={editorState}
             onChange={this.onChange}
-            blockStyleFn={blockStyleFn}
+            blockStyleFn={this.getBlockStyleFn()}
             customStyleMap={getCustomStyleMap()}
             handleReturn={this.handleReturn}
+            blockRenderMap={this.getBlockRenderMap()}
             blockRendererFn={this.blockRendererFn}
             handleKeyCommand={this.handleKeyCommand}
             ariaLabel={ariaLabel || 'rdw-editor'}
